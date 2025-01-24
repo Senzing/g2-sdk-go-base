@@ -548,21 +548,21 @@ func (client *Szconfigmanager) createNewConfigAddDataSources(ctx context.Context
 	if err != nil {
 		return 0, err
 	}
-	configHandle, err := client.szconfig_load(ctx, oldConfigDefinition)
+	configHandle, err := client.szconfigLoad(ctx, oldConfigDefinition)
 	if err != nil {
 		return 0, err
 	}
 	for _, dataSourceCode := range dataSourceCodes {
-		_, err := client.szconfig_addDataSource(ctx, configHandle, dataSourceCode)
-		if err != nil {
-			return 0, err
-		}
+		_, _ = client.szconfigAddDataSource(ctx, configHandle, dataSourceCode)
+		// if err != nil {
+		// 	return 0, err
+		// }
 	}
-	newConfigDefinition, err := client.szconfig_save(ctx, configHandle)
+	newConfigDefinition, err := client.szconfigSave(ctx, configHandle)
 	if err != nil {
 		return 0, err
 	}
-	err = client.szconfig_close(ctx, configHandle)
+	err = client.szconfigClose(ctx, configHandle)
 	if err != nil {
 		return 0, err
 	}
@@ -622,15 +622,15 @@ func (client *Szconfigmanager) getDataSources(ctx context.Context, configID int6
 	if err != nil {
 		return "", err
 	}
-	configHandle, err := client.szconfig_load(ctx, configDefinition)
+	configHandle, err := client.szconfigLoad(ctx, configDefinition)
 	if err != nil {
 		return "", err
 	}
-	datasources, err := client.szconfig_listDataSources(ctx, configHandle)
+	datasources, err := client.szconfigListDataSources(ctx, configHandle)
 	if err != nil {
 		return "", err
 	}
-	err = client.szconfig_close(ctx, configHandle)
+	err = client.szconfigClose(ctx, configHandle)
 	if err != nil {
 		return "", err
 	}
@@ -658,17 +658,17 @@ func (client *Szconfigmanager) getTemplateConfigID(ctx context.Context) (int64, 
 	defer runtime.UnlockOSThread()
 	var err error
 
-	configHandle, err := client.szconfig_create(ctx)
+	configHandle, err := client.szconfigCreate(ctx)
 	if err != nil {
 		return 0, err
 	}
 
-	configDefinition, err := client.szconfig_save(ctx, configHandle)
+	configDefinition, err := client.szconfigSave(ctx, configHandle)
 	if err != nil {
 		return 0, err
 	}
 
-	err = client.szconfig_close(ctx, configHandle)
+	err = client.szconfigClose(ctx, configHandle)
 	if err != nil {
 		return 0, err
 	}
@@ -714,7 +714,7 @@ func (client *Szconfigmanager) setDefaultConfigID(ctx context.Context, configID 
 	return err
 }
 
-func (client *Szconfigmanager) szconfig_addDataSource(ctx context.Context, configHandle uintptr, dataSourceCode string) (string, error) {
+func (client *Szconfigmanager) szconfigAddDataSource(ctx context.Context, configHandle uintptr, dataSourceCode string) (string, error) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	var err error
@@ -731,7 +731,7 @@ func (client *Szconfigmanager) szconfig_addDataSource(ctx context.Context, confi
 	return resultResponse, err
 }
 
-func (client *Szconfigmanager) szconfig_close(ctx context.Context, configHandle uintptr) error {
+func (client *Szconfigmanager) szconfigClose(ctx context.Context, configHandle uintptr) error {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	var err error
@@ -742,7 +742,7 @@ func (client *Szconfigmanager) szconfig_close(ctx context.Context, configHandle 
 	return err
 }
 
-func (client *Szconfigmanager) szconfig_create(ctx context.Context) (uintptr, error) {
+func (client *Szconfigmanager) szconfigCreate(ctx context.Context) (uintptr, error) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	var err error
@@ -755,7 +755,7 @@ func (client *Szconfigmanager) szconfig_create(ctx context.Context) (uintptr, er
 	return resultResponse, err
 }
 
-func (client *Szconfigmanager) szconfig_listDataSources(ctx context.Context, configHandle uintptr) (string, error) {
+func (client *Szconfigmanager) szconfigListDataSources(ctx context.Context, configHandle uintptr) (string, error) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	var err error
@@ -769,7 +769,7 @@ func (client *Szconfigmanager) szconfig_listDataSources(ctx context.Context, con
 	return resultResponse, err
 }
 
-func (client *Szconfigmanager) szconfig_load(ctx context.Context, configDefinition string) (uintptr, error) {
+func (client *Szconfigmanager) szconfigLoad(ctx context.Context, configDefinition string) (uintptr, error) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	var err error
@@ -784,7 +784,7 @@ func (client *Szconfigmanager) szconfig_load(ctx context.Context, configDefiniti
 	return resultResponse, err
 }
 
-func (client *Szconfigmanager) szconfig_save(ctx context.Context, configHandle uintptr) (string, error) {
+func (client *Szconfigmanager) szconfigSave(ctx context.Context, configHandle uintptr) (string, error) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	var err error
