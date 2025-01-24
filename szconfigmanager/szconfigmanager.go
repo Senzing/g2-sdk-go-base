@@ -6,6 +6,7 @@ package szconfigmanager
 
 /*
 #include <stdlib.h>
+#include "libSzConfig.h"
 #include "libSzConfigMgr.h"
 #include "szhelpers/SzLang_helpers.h"
 #cgo CFLAGS: -g -I/opt/senzing/er/sdk/c
@@ -22,6 +23,7 @@ import (
 	"fmt"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 	"unsafe"
 
@@ -93,6 +95,42 @@ func (client *Szconfigmanager) AddConfig(ctx context.Context, configDefinition s
 }
 
 /*
+Method CreateNewConfigAddDataSources creates a new Senzing configuration given an existing Senzing configuration and Data Source Codes.
+
+Input
+  - ctx: A context to control lifecycle.
+  - configID: The identifier of the initial Senzing configuration to build upon.
+  - configComment: A free-form string describing the Senzing configuration.
+  - dataSourceCodes: One or more data source codes.
+
+Output
+  - configID: A Senzing configuration identifier of the new configuration.
+*/
+func (client *Szconfigmanager) CreateNewConfigAddDataSources(ctx context.Context, configID int64, configComment string, dataSourceCodes ...string) (int64, error) {
+	var err error
+	var result int64
+	if client.isTrace {
+		entryTime := time.Now()
+		client.traceEntry(999, configID, configComment, strings.Join(dataSourceCodes, ","))
+		defer func() {
+			client.traceExit(999, configID, configComment, strings.Join(dataSourceCodes, ","), result, err, time.Since(entryTime))
+		}()
+	}
+	result, err = client.createNewConfigAddDataSources(ctx, configID, configComment, dataSourceCodes...)
+	if client.observers != nil {
+		go func() {
+			details := map[string]string{
+				"configID":        strconv.FormatInt(configID, baseTen),
+				"configComment":   configComment,
+				"dataSourceCodes": strings.Join(dataSourceCodes, ","),
+			}
+			notifier.Notify(ctx, client.observers, client.observerOrigin, ComponentID, 9999, err, details)
+		}()
+	}
+	return result, err
+}
+
+/*
 Method Destroy will destroy and perform cleanup for the Senzing SzConfigMgr object.
 It should be called after all other calls are complete.
 
@@ -145,13 +183,13 @@ func (client *Szconfigmanager) GetConfig(ctx context.Context, configID int64) (s
 }
 
 /*
-Method GetConfigs retrieves a list of Senzing configuration JSON documents from the Senzing datastore.
+Method GetConfigs retrieves a list of Senzing configurations from the Senzing datastore.
 
 Input
   - ctx: A context to control lifecycle.
 
 Output
-  - A JSON document listing Senzing configuration JSON document metadata.
+  - A JSON document listing Senzing configuration metadata.
 */
 func (client *Szconfigmanager) GetConfigs(ctx context.Context) (string, error) {
 	var err error
@@ -172,7 +210,37 @@ func (client *Szconfigmanager) GetConfigs(ctx context.Context) (string, error) {
 }
 
 /*
-Method GetDefaultConfigID retrieves the default Senzing configuration JSON document identifier from the Senzing datastore.
+Method GetDataSources retrieves a list of datasources from a Senzing configuration.
+
+Input
+  - ctx: A context to control lifecycle.
+  - configID: The identifier of the desired Senzing configuration to inspect.
+
+Output
+  - A JSON document listing Senzing configuration datasources.
+*/
+func (client *Szconfigmanager) GetDataSources(ctx context.Context, configID int64) (string, error) {
+	var err error
+	var result string
+	if client.isTrace {
+		entryTime := time.Now()
+		client.traceEntry(9999)
+		defer func() { client.traceExit(9999, result, err, time.Since(entryTime)) }()
+	}
+	result, err = client.getDataSources(ctx, configID)
+	if client.observers != nil {
+		go func() {
+			details := map[string]string{
+				"configID": strconv.FormatInt(configID, baseTen),
+			}
+			notifier.Notify(ctx, client.observers, client.observerOrigin, ComponentID, 9999, err, details)
+		}()
+	}
+	return result, err
+}
+
+/*
+Method GetDefaultConfigID retrieves the default Senzing configuration identifier from the Senzing datastore.
 Note: this may not be the currently active in-memory configuration.
 See [Szconfigmanager.SetDefaultConfigID] and [Szconfigmanager.ReplaceDefaultConfigID] for more details.
 
@@ -180,7 +248,7 @@ Input
   - ctx: A context to control lifecycle.
 
 Output
-  - configID: The default Senzing configuration JSON document identifier. If none exists, zero (0) is returned.
+  - configID: The default Senzing configuration identifier. If none exists, zero (0) is returned.
 */
 func (client *Szconfigmanager) GetDefaultConfigID(ctx context.Context) (int64, error) {
 	var err error
@@ -201,19 +269,48 @@ func (client *Szconfigmanager) GetDefaultConfigID(ctx context.Context) (int64, e
 }
 
 /*
+Method GetTemplateConfigID retrieves the Senzing configuration identifier of the template configuration.
+Note: this may not be the currently active in-memory configuration.
+See [Szconfigmanager.SetDefaultConfigID] and [Szconfigmanager.ReplaceDefaultConfigID] for more details.
+
+Input
+  - ctx: A context to control lifecycle.
+
+Output
+  - configID: The template Senzing configuration identifier.
+*/
+func (client *Szconfigmanager) GetTemplateConfigID(ctx context.Context) (int64, error) {
+	var err error
+	var result int64
+	if client.isTrace {
+		entryTime := time.Now()
+		client.traceEntry(9999)
+		defer func() { client.traceExit(9999, result, err, time.Since(entryTime)) }()
+	}
+	result, err = client.getTemplateConfigID(ctx)
+	if client.observers != nil {
+		go func() {
+			details := map[string]string{}
+			notifier.Notify(ctx, client.observers, client.observerOrigin, ComponentID, 9999, err, details)
+		}()
+	}
+	return result, err
+}
+
+/*
 Similar to the [Szconfigmanager.SetDefaultConfigID] method,
-method ReplaceDefaultConfigID sets which Senzing configuration JSON document is used when initializing or reinitializing the system.
-The difference is that ReplaceDefaultConfigID only succeeds when the old Senzing configuration JSON document identifier
+method ReplaceDefaultConfigID sets which Senzing configuration is used when initializing or reinitializing the system.
+The difference is that ReplaceDefaultConfigID only succeeds when the old Senzing configuration identifier
 is the existing default when the new identifier is applied.
 In other words, if currentDefaultConfigID is no longer the "old" identifier, the operation will fail.
 It is similar to a "compare-and-swap" instruction to avoid a "race condition".
 Note that calling the ReplaceDefaultConfigID method does not affect the currently running in-memory configuration.
-To simply set the default Senzing configuration JSON document identifier, use [Szconfigmanager.SetDefaultConfigID].
+To simply set the default Senzing configuration identifier, use [Szconfigmanager.SetDefaultConfigID].
 
 Input
   - ctx: A context to control lifecycle.
-  - currentDefaultConfigID: The Senzing configuration JSON document identifier to replace.
-  - newDefaultConfigID: The Senzing configuration JSON document identifier to use as the default.
+  - currentDefaultConfigID: The Senzing configuration identifier to replace.
+  - newDefaultConfigID: The Senzing configuration identifier to use as the default.
 */
 func (client *Szconfigmanager) ReplaceDefaultConfigID(ctx context.Context, currentDefaultConfigID int64, newDefaultConfigID int64) error {
 	var err error
@@ -235,7 +332,7 @@ func (client *Szconfigmanager) ReplaceDefaultConfigID(ctx context.Context, curre
 }
 
 /*
-Method SetDefaultConfigID sets which Senzing configuration JSON document identifier
+Method SetDefaultConfigID sets which Senzing configuration identifier
 is used when initializing or reinitializing the system.
 Note that calling the SetDefaultConfigID method does not affect the currently
 running in-memory configuration.
@@ -244,7 +341,7 @@ To avoid race conditions, see  [Szconfigmanager.ReplaceDefaultConfigID].
 
 Input
   - ctx: A context to control lifecycle.
-  - configID: The Senzing configuration JSON document identifier to use as the default.
+  - configID: The Senzing configuration identifier to use as the default.
 */
 func (client *Szconfigmanager) SetDefaultConfigID(ctx context.Context, configID int64) error {
 	var err error
@@ -437,6 +534,41 @@ func (client *Szconfigmanager) addConfig(ctx context.Context, configDefinition s
 	return resultConfigID, err
 }
 
+func (client *Szconfigmanager) createNewConfigAddDataSources(ctx context.Context, configID int64, configComment string, dataSourceCodes ...string) (int64, error) {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	var err error
+	if configID == 0 {
+		configID, err = client.getDefaultConfigID(ctx)
+		if err != nil {
+			return 0, err
+		}
+	}
+	oldConfigDefinition, err := client.getConfig(ctx, configID)
+	if err != nil {
+		return 0, err
+	}
+	configHandle, err := client.szconfig_load(ctx, oldConfigDefinition)
+	if err != nil {
+		return 0, err
+	}
+	for _, dataSourceCode := range dataSourceCodes {
+		_, err := client.szconfig_addDataSource(ctx, configHandle, dataSourceCode)
+		if err != nil {
+			return 0, err
+		}
+	}
+	newConfigDefinition, err := client.szconfig_save(ctx, configHandle)
+	if err != nil {
+		return 0, err
+	}
+	err = client.szconfig_close(ctx, configHandle)
+	if err != nil {
+		return 0, err
+	}
+	return client.addConfig(ctx, newConfigDefinition, configComment)
+}
+
 func (client *Szconfigmanager) destroy(ctx context.Context) error {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
@@ -476,6 +608,35 @@ func (client *Szconfigmanager) getConfigList(ctx context.Context) (string, error
 	return resultResponse, err
 }
 
+func (client *Szconfigmanager) getDataSources(ctx context.Context, configID int64) (string, error) {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	var err error
+	if configID == 0 {
+		configID, err = client.getDefaultConfigID(ctx)
+		if err != nil {
+			return "", err
+		}
+	}
+	configDefinition, err := client.getConfig(ctx, configID)
+	if err != nil {
+		return "", err
+	}
+	configHandle, err := client.szconfig_load(ctx, configDefinition)
+	if err != nil {
+		return "", err
+	}
+	datasources, err := client.szconfig_listDataSources(ctx, configHandle)
+	if err != nil {
+		return "", err
+	}
+	err = client.szconfig_close(ctx, configHandle)
+	if err != nil {
+		return "", err
+	}
+	return datasources, err
+}
+
 func (client *Szconfigmanager) getDefaultConfigID(ctx context.Context) (int64, error) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
@@ -486,7 +647,34 @@ func (client *Szconfigmanager) getDefaultConfigID(ctx context.Context) (int64, e
 		err = client.newError(ctx, 4005, result.returnCode, result)
 	}
 	resultConfigID = int64(C.longlong(result.configID))
+	if resultConfigID == 0 {
+		resultConfigID, err = client.getTemplateConfigID(ctx)
+	}
 	return resultConfigID, err
+}
+
+func (client *Szconfigmanager) getTemplateConfigID(ctx context.Context) (int64, error) {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	var err error
+
+	configHandle, err := client.szconfig_create(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	configDefinition, err := client.szconfig_save(ctx, configHandle)
+	if err != nil {
+		return 0, err
+	}
+
+	err = client.szconfig_close(ctx, configHandle)
+	if err != nil {
+		return 0, err
+	}
+
+	configComment := fmt.Sprintf("Template date: %s", time.Now().Format(time.RFC3339))
+	return client.addConfig(ctx, configDefinition, configComment)
 }
 
 func (client *Szconfigmanager) init(ctx context.Context, instanceName string, settings string, verboseLogging int64) error {
@@ -524,6 +712,90 @@ func (client *Szconfigmanager) setDefaultConfigID(ctx context.Context, configID 
 		err = client.newError(ctx, 4008, configID, result)
 	}
 	return err
+}
+
+func (client *Szconfigmanager) szconfig_addDataSource(ctx context.Context, configHandle uintptr, dataSourceCode string) (string, error) {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	var err error
+	var resultResponse string
+	dataSourceDefinition := `{"DSRC_CODE": "` + dataSourceCode + `"}`
+	dataSourceDefinitionForC := C.CString(dataSourceDefinition)
+	defer C.free(unsafe.Pointer(dataSourceDefinitionForC))
+	result := C.SzConfig_addDataSource_helper(C.uintptr_t(configHandle), dataSourceDefinitionForC)
+	if result.returnCode != noError {
+		err = client.newError(ctx, 9999, configHandle, dataSourceCode, result.returnCode, result)
+	}
+	resultResponse = C.GoString(result.response)
+	C.SzHelper_free(unsafe.Pointer(result.response))
+	return resultResponse, err
+}
+
+func (client *Szconfigmanager) szconfig_close(ctx context.Context, configHandle uintptr) error {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	var err error
+	result := C.SzConfig_close_helper(C.uintptr_t(configHandle))
+	if result != noError {
+		err = client.newError(ctx, 9999, configHandle, result)
+	}
+	return err
+}
+
+func (client *Szconfigmanager) szconfig_create(ctx context.Context) (uintptr, error) {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	var err error
+	var resultResponse uintptr
+	result := C.SzConfig_create_helper()
+	if result.returnCode != noError {
+		err = client.newError(ctx, 4003, result.returnCode)
+	}
+	resultResponse = uintptr(result.response)
+	return resultResponse, err
+}
+
+func (client *Szconfigmanager) szconfig_listDataSources(ctx context.Context, configHandle uintptr) (string, error) {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	var err error
+	var resultResponse string
+	result := C.SzConfig_listDataSources_helper(C.uintptr_t(configHandle))
+	if result.returnCode != noError {
+		err = client.newError(ctx, 9999, configHandle, result.returnCode)
+	}
+	resultResponse = C.GoString(result.response)
+	C.SzHelper_free(unsafe.Pointer(result.response))
+	return resultResponse, err
+}
+
+func (client *Szconfigmanager) szconfig_load(ctx context.Context, configDefinition string) (uintptr, error) {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	var err error
+	var resultResponse uintptr
+	jsonConfigForC := C.CString(configDefinition)
+	defer C.free(unsafe.Pointer(jsonConfigForC))
+	result := C.SzConfig_load_helper(jsonConfigForC)
+	if result.returnCode != noError {
+		err = client.newError(ctx, 9999, configDefinition, result.returnCode)
+	}
+	resultResponse = uintptr(result.response)
+	return resultResponse, err
+}
+
+func (client *Szconfigmanager) szconfig_save(ctx context.Context, configHandle uintptr) (string, error) {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	var err error
+	var resultResponse string
+	result := C.SzConfig_save_helper(C.uintptr_t(configHandle))
+	if result.returnCode != noError {
+		err = client.newError(ctx, 9999, configHandle, result.returnCode, result)
+	}
+	resultResponse = C.GoString(result.response)
+	C.SzHelper_free(unsafe.Pointer(result.response))
+	return resultResponse, err
 }
 
 // ----------------------------------------------------------------------------
