@@ -66,7 +66,7 @@ func ExampleSzconfigmanager_AddConfig() {
 	// Output: true
 }
 
-func ExampleSzconfigmanager_CreateNewConfigAddDataSources() {
+func ExampleSzconfigmanager_CreateNewConfig() {
 	// For more information, visit https://github.com/senzing-garage/sz-sdk-go-core/blob/main/szconfigmanager/szconfigmanager_examples_test.go
 	ctx := context.TODO()
 	szAbstractFactory := getSzAbstractFactory(ctx)
@@ -75,7 +75,7 @@ func ExampleSzconfigmanager_CreateNewConfigAddDataSources() {
 		handleError(err)
 	}
 	configComment := "Example configuration"
-	configID, err := szConfigManager.CreateNewConfigAddDataSources(ctx, 0, configComment, "TEST_DATASOURCE", "ANOTHER_DATASOURCE")
+	configID, err := szConfigManager.CreateNewConfig(ctx, 0, configComment, "TEST_DATASOURCE", "ANOTHER_DATASOURCE")
 	if err != nil {
 		handleError(err)
 	}

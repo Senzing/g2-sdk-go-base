@@ -95,7 +95,7 @@ func (client *Szconfigmanager) AddConfig(ctx context.Context, configDefinition s
 }
 
 /*
-Method CreateNewConfigAddDataSources creates a new Senzing configuration given an existing Senzing configuration and Data Source Codes.
+Method CreateNewConfig creates a new Senzing configuration given an existing Senzing configuration and Data Source Codes.
 
 Input
   - ctx: A context to control lifecycle.
@@ -106,7 +106,7 @@ Input
 Output
   - configID: A Senzing configuration identifier of the new configuration.
 */
-func (client *Szconfigmanager) CreateNewConfigAddDataSources(ctx context.Context, configID int64, configComment string, dataSourceCodes ...string) (int64, error) {
+func (client *Szconfigmanager) CreateNewConfig(ctx context.Context, configID int64, configComment string, dataSourceCodes ...string) (int64, error) {
 	var err error
 	var result int64
 	if client.isTrace {
@@ -116,7 +116,7 @@ func (client *Szconfigmanager) CreateNewConfigAddDataSources(ctx context.Context
 			client.traceExit(999, configID, configComment, strings.Join(dataSourceCodes, ","), result, err, time.Since(entryTime))
 		}()
 	}
-	result, err = client.createNewConfigAddDataSources(ctx, configID, configComment, dataSourceCodes...)
+	result, err = client.createNewConfig(ctx, configID, configComment, dataSourceCodes...)
 	if client.observers != nil {
 		go func() {
 			details := map[string]string{
@@ -534,7 +534,7 @@ func (client *Szconfigmanager) addConfig(ctx context.Context, configDefinition s
 	return resultConfigID, err
 }
 
-func (client *Szconfigmanager) createNewConfigAddDataSources(ctx context.Context, configID int64, configComment string, dataSourceCodes ...string) (int64, error) {
+func (client *Szconfigmanager) createNewConfig(ctx context.Context, configID int64, configComment string, dataSourceCodes ...string) (int64, error) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	var err error
