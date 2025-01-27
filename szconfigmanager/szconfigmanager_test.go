@@ -260,7 +260,7 @@ func TestSzconfigmanager_GetDefaultConfigID(test *testing.T) {
 func TestSzconfigmanager_GetTemplateConfigID(test *testing.T) {
 	ctx := context.TODO()
 	szConfigManager := getTestObject(ctx, test)
-	actual, err := szConfigManager.GetDataSources(ctx, 0)
+	actual, err := szConfigManager.GetTemplateConfigID(ctx)
 	require.NoError(test, err)
 	printActual(test, actual)
 }
