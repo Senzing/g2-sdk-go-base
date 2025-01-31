@@ -175,14 +175,6 @@ func ExampleSzconfigmanager_ReplaceDefaultConfigID() {
 	if err != nil {
 		handleError(err)
 	}
-	configHandle, err := szConfig.CreateConfig(ctx)
-	if err != nil {
-		handleError(err)
-	}
-	configDefinition, err := szConfig.ExportConfig(ctx, configHandle)
-	if err != nil {
-		handleError(err)
-	}
 	szConfigManager, err := szAbstractFactory.CreateConfigManager(ctx)
 	if err != nil {
 		handleError(err)
@@ -191,14 +183,33 @@ func ExampleSzconfigmanager_ReplaceDefaultConfigID() {
 	if err != nil {
 		handleError(err)
 	}
-	configComment := "Example configuration"
-	newDefaultConfigID, err := szConfigManager.AddConfig(ctx, configDefinition, configComment)
+	configDefinition, err := szConfigManager.GetConfig(ctx, currentDefaultConfigID)
 	if err != nil {
 		handleError(err)
 	}
-	err = szConfigManager.ReplaceDefaultConfigID(ctx, currentDefaultConfigID, newDefaultConfigID)
+	configHandle, err := szConfig.ImportConfig(ctx, configDefinition)
 	if err != nil {
-		_ = err
+		handleError(err)
+	}
+	_, err = szConfig.AddDataSource(ctx, configHandle, "XXX")
+	if err != nil {
+		handleError(err)
+	}
+	newConfigDefinition, err := szConfig.ExportConfig(ctx, configHandle)
+	if err != nil {
+		handleError(err)
+	}
+	err = szConfig.CloseConfig(ctx, configHandle)
+	if err != nil {
+		handleError(err)
+	}
+	newConfigID, err := szConfigManager.AddConfig(ctx, newConfigDefinition, "Command")
+	if err != nil {
+		handleError(err)
+	}
+	err = szConfigManager.ReplaceDefaultConfigID(ctx, currentDefaultConfigID, newConfigID)
+	if err != nil {
+		handleError(err)
 	}
 	// Output:
 }
